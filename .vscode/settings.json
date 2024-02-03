@@ -1,0 +1,10 @@
+{
+    "cortex-debug.gdbPath": "/usr/bin/gdb-multiarch",
+    "files.associations": {
+        "input": "code-text-binary",
+        "*.gnbf": "plaintext",
+        "rcc.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled",
+    // "cortex-debug.openocdPath": "/usr/bin/openocd",
+}
