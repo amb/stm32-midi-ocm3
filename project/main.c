@@ -3,19 +3,13 @@
 
 static void gpio_setup(void)
 {
-	/* Enable GPIOC clock. */
 	rcc_periph_clock_enable(RCC_GPIOC);
-
-	/* Set LED_PIN to 'output push-pull'. */
 	gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO13);
 }
 
 static void button_setup(void)
 {
-	/* Enable GPIOA clock. */
 	rcc_periph_clock_enable(RCC_GPIOA);
-
-	/* Set GPIOA0 to 'input floating'. */
 	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO0);
 }
 
