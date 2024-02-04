@@ -327,17 +327,16 @@ static void usbmidi_set_config(usbd_device *usbd_dev, uint16_t wValue)
 {
 	(void)wValue;
 
-	usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64,
-			usbmidi_data_rx_cb);
+	usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, usbmidi_data_rx_cb);
 	usbd_ep_setup(usbd_dev, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
 }
 
 static void button_send_event(usbd_device *usbd_dev)
 {
 	char buf[4] = { 0x08, /* USB framing: virtual cable 0, note on */
-			0x80, /* MIDI command: note on, channel 1 */
-			60,   /* Note 60 (middle C) */
-			64,   /* "Normal" velocity */
+		0x80, /* MIDI command: note on, channel 1 */
+		60,   /* Note 60 (middle C) */
+		64,   /* "Normal" velocity */
 	};
 
 	// buf[0] |= pressed;
@@ -373,9 +372,8 @@ int main(void)
 		__asm__("nop");
 	}
 
-	usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev, &config,
-			usb_strings, 3,
-			usbd_control_buffer, sizeof(usbd_control_buffer));
+	usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev, &config, usb_strings, 3,
+		usbd_control_buffer, sizeof(usbd_control_buffer));
 
 	usbd_register_set_config_callback(usbd_dev, usbmidi_set_config);
 
