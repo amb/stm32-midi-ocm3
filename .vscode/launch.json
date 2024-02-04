@@ -13,7 +13,8 @@
             "servertype": "openocd",
             "configFiles": [
                 "/usr/share/openocd/scripts/interface/stlink.cfg",
-                "/usr/share/openocd/scripts/target/stm32f4x.cfg"
+                "/usr/share/openocd/scripts/target/stm32f1x.cfg"
+                // "/usr/share/openocd/scripts/target/stm32f4x.cfg"
             ],
             "searchDir": [],
             "runToEntryPoint": "main",

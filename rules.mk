@@ -62,13 +62,15 @@ OBJS += $(CXXFILES:%.cxx=$(BUILD_DIR)/%.o)
 OBJS += $(AFILES:%.S=$(BUILD_DIR)/%.o)
 GENERATED_BINS = $(PROJECT).elf $(PROJECT).bin $(PROJECT).map $(PROJECT).list $(PROJECT).lss
 
-TGT_CPPFLAGS += -MD
+MY_FLAGS = -flto
+
+TGT_CPPFLAGS += -MD $(MY_FLAGS)
 TGT_CPPFLAGS += -Wall -Wundef $(INCLUDES)
 TGT_CPPFLAGS += $(INCLUDES) $(OPENCM3_DEFS)
 
 TGT_CFLAGS += $(OPT) $(CSTD) -ggdb3
 TGT_CFLAGS += $(ARCH_FLAGS)
-TGT_CFLAGS += -fno-common
+TGT_CFLAGS += -fno-common $(MY_FLAGS)
 TGT_CFLAGS += -ffunction-sections -fdata-sections
 TGT_CFLAGS += -Wextra -Wshadow -Wno-unused-variable -Wimplicit-function-declaration
 TGT_CFLAGS += -Wredundant-decls -Wstrict-prototypes -Wmissing-prototypes

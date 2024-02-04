@@ -1,3 +1,22 @@
+/*
+ * This file is part of the libopencm3 project.
+ *
+ * Copyright (C) 2010 Gareth McMullin <gareth@blacksphere.co.nz>
+ *
+ * This library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <stdlib.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
@@ -5,6 +24,14 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/hid.h>
+
+/* Define this to include the DFU APP interface. */
+#define INCLUDE_DFU_INTERFACE
+
+#ifdef INCLUDE_DFU_INTERFACE
+#include <libopencm3/cm3/scb.h>
+#include <libopencm3/usb/dfu.h>
+#endif
 
 static usbd_device *usbd_dev;
 
@@ -112,16 +139,51 @@ const struct usb_interface_descriptor hid_iface = {
 	.extralen = sizeof(hid_function),
 };
 
+#ifdef INCLUDE_DFU_INTERFACE
+const struct usb_dfu_descriptor dfu_function = {
+	.bLength = sizeof(struct usb_dfu_descriptor),
+	.bDescriptorType = DFU_FUNCTIONAL,
+	.bmAttributes = USB_DFU_CAN_DOWNLOAD | USB_DFU_WILL_DETACH,
+	.wDetachTimeout = 255,
+	.wTransferSize = 1024,
+	.bcdDFUVersion = 0x011A,
+};
+
+const struct usb_interface_descriptor dfu_iface = {
+	.bLength = USB_DT_INTERFACE_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE,
+	.bInterfaceNumber = 1,
+	.bAlternateSetting = 0,
+	.bNumEndpoints = 0,
+	.bInterfaceClass = 0xFE,
+	.bInterfaceSubClass = 1,
+	.bInterfaceProtocol = 1,
+	.iInterface = 0,
+
+	.extra = &dfu_function,
+	.extralen = sizeof(dfu_function),
+};
+#endif
+
 const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.altsetting = &hid_iface,
+#ifdef INCLUDE_DFU_INTERFACE
+}, {
+	.num_altsetting = 1,
+	.altsetting = &dfu_iface,
+#endif
 }};
 
 const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
+#ifdef INCLUDE_DFU_INTERFACE
+	.bNumInterfaces = 2,
+#else
 	.bNumInterfaces = 1,
+#endif
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0xC0,
@@ -157,6 +219,34 @@ static enum usbd_request_return_codes hid_control_request(usbd_device *dev, stru
 	return USBD_REQ_HANDLED;
 }
 
+// #ifdef INCLUDE_DFU_INTERFACE
+// static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
+// {
+// 	(void)req;
+// 	(void)dev;
+
+// 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+// 		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO10);
+// 	gpio_set(GPIOA, GPIO10);
+// 	scb_reset_core();
+// }
+
+// static enum usbd_request_return_codes dfu_control_request(usbd_device *dev, struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
+// 			void (**complete)(usbd_device *, struct usb_setup_data *))
+// {
+// 	(void)buf;
+// 	(void)len;
+// 	(void)dev;
+
+// 	if ((req->bmRequestType != 0x21) || (req->bRequest != DFU_DETACH))
+// 		return USBD_REQ_NOTSUPP; /* Only accept class request. */
+
+// 	*complete = dfu_detach_complete;
+
+// 	return USBD_REQ_HANDLED;
+// }
+// #endif
+
 static void hid_set_config(usbd_device *dev, uint16_t wValue)
 {
 	(void)wValue;
@@ -169,6 +259,13 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
 				USB_REQ_TYPE_STANDARD | USB_REQ_TYPE_INTERFACE,
 				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				hid_control_request);
+#ifdef INCLUDE_DFU_INTERFACE
+	usbd_register_control_callback(
+				dev,
+				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
+				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
+				dfu_control_request);
+#endif
 
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	/* SysTick interrupt every N clock pulses: set reload to N-1 */
@@ -191,7 +288,8 @@ int main(void)
 	 * The magic delay is somewhat arbitrary, no guarantees on USBIF
 	 * compliance here, but "it works" in most places.
 	 */
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+		GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
 	gpio_clear(GPIOA, GPIO12);
 	for (unsigned i = 0; i < 800000; i++) {
 		__asm__("nop");

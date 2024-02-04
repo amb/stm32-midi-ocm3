@@ -1,14 +1,13 @@
 PROJECT = midi-ocm
 BUILD_DIR = bin
 
-SHARED_DIR = ../common-code
 CFILES = main.c
-CFILES += api.c
-AFILES += api-asm.S
 
-DEVICE=stm32f411re
 OOCD_INTERFACE = stlink
-OOCD_TARGET = stm32f4x
+# DEVICE=stm32f411re
+# OOCD_TARGET = stm32f4x
+DEVICE=stm32f103c8t6
+OOCD_TARGET = stm32f1x
 
 # You shouldn't have to edit anything below here.
 VPATH += $(SHARED_DIR)

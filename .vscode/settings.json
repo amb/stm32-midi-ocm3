@@ -3,7 +3,10 @@
     "files.associations": {
         "input": "code-text-binary",
         "*.gnbf": "plaintext",
-        "rcc.h": "c"
+        "rcc.h": "c",
+        "exti.h": "c",
+        "nvic.h": "c",
+        "systick.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     // "cortex-debug.openocdPath": "/usr/bin/openocd",
