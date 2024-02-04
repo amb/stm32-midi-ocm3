@@ -6,7 +6,9 @@
         "rcc.h": "c",
         "exti.h": "c",
         "nvic.h": "c",
-        "systick.h": "c"
+        "systick.h": "c",
+        "hid.h": "c",
+        "usbd.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     // "cortex-debug.openocdPath": "/usr/bin/openocd",
