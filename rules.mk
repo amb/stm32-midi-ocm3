@@ -62,7 +62,19 @@ OBJS += $(CXXFILES:%.cxx=$(BUILD_DIR)/%.o)
 OBJS += $(AFILES:%.S=$(BUILD_DIR)/%.o)
 GENERATED_BINS = $(PROJECT).elf $(PROJECT).bin $(PROJECT).map $(PROJECT).list $(PROJECT).lss
 
-MY_FLAGS = -flto
+# U8G2 graphics library, grab the U8X8 interfaces
+# U8G2_SRCS = $(wildcard ../u8g2/csrc/u8x8*.c)
+U8G2_SRCS = ../u8g2/csrc/u8x8_8x8.c
+U8G2_SRCS += ../u8g2/csrc/u8x8_d_ssd1306_64x32.c
+U8G2_SRCS += ../u8g2/csrc/u8x8_cad.c
+U8G2_SRCS += ../u8g2/csrc/u8x8_byte.c
+U8G2_SRCS += ../u8g2/csrc/u8x8_gpio.c
+U8G2_SRCS += ../u8g2/csrc/u8x8_display.c
+U8G2_SRCS += ../u8g2/csrc/u8x8_setup.c
+# U8G2_SRCS += ../u8g2/csrc/u8x8_fonts.c
+OBJS += $(U8G2_SRCS:%.c=%.o)
+
+MY_FLAGS = -flto -DSTM32F1
 
 TGT_CPPFLAGS += -MD $(MY_FLAGS)
 TGT_CPPFLAGS += -Wall -Wundef $(INCLUDES)

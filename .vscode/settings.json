@@ -8,7 +8,10 @@
         "nvic.h": "c",
         "systick.h": "c",
         "hid.h": "c",
-        "usbd.h": "c"
+        "usbd.h": "c",
+        "u8x8.h": "c",
+        "i2c.h": "c",
+        "i2c_common_v1.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     // "cortex-debug.openocdPath": "/usr/bin/openocd",
