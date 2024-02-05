@@ -74,7 +74,7 @@ U8G2_SRCS += ../u8g2/csrc/u8x8_setup.c
 # U8G2_SRCS += ../u8g2/csrc/u8x8_fonts.c
 OBJS += $(U8G2_SRCS:%.c=%.o)
 
-MY_FLAGS = -flto -DSTM32F1
+MY_FLAGS = -DSTM32F1
 
 TGT_CPPFLAGS += -MD $(MY_FLAGS)
 TGT_CPPFLAGS += -Wall -Wundef $(INCLUDES)
