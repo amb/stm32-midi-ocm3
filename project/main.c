@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "font8x8_basic.h"
+
 #define WIDTH 128
 #define HEIGHT 32
 
@@ -67,7 +69,7 @@ struct SSD1306
 	uint8_t *screen_data;
 };
 
-void SSD1306_send_data(struct SSD1306 *ssd1306, int spec, uint8_t data)
+static void SSD1306_send_data(struct SSD1306 *ssd1306, int spec, uint8_t data)
 {
 	uint8_t bf[2];
 	bf[0] = spec;
@@ -75,14 +77,41 @@ void SSD1306_send_data(struct SSD1306 *ssd1306, int spec, uint8_t data)
 	i2c_transfer7(ssd1306->i2c, ssd1306->addr, bf, 2, NULL, 0);
 }
 
-void SSD1306_draw_pixel(struct SSD1306 *ssd1306, uint8_t x, uint8_t y)
+static void SSD1306_draw_pixel(struct SSD1306 *ssd1306, uint8_t x, uint8_t y)
 {
 	x &= 0b01111111;
 	y &= 0b00011111;
+	// y = HEIGHT - 1 - (y & 0b00011111);
 	ssd1306->screen_data[x + (y >> 3) * ssd1306->width] |= 1 << (y & 0x07);
 }
 
-void SSD1306_refresh(struct SSD1306 *ssd1306)
+static void SSD1306_draw_char(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, char ch)
+{
+	uint8_t i, j;
+	for (i = 0; i < 8; i++)
+	{
+		uint8_t line = font8x8_basic[(int)ch][i];
+		for (j = 0; j < 8; j++, line >>= 1)
+		{
+			if (line & 1)
+			{
+				// SSD1306_draw_pixel(ssd1306, x + j, y + i);
+				ssd1306->screen_data[(x + j) + ((y + i) >> 3) * ssd1306->width] |= 1 << ((y + i) & 0x07);
+			}
+		}
+	}
+}
+
+static void SSD1306_draw_string(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, const char *str)
+{
+	while (*str)
+	{
+		SSD1306_draw_char(ssd1306, x, y, *str++);
+		x += 8;
+	}
+}
+
+static void SSD1306_refresh(struct SSD1306 *ssd1306)
 {
 	uint8_t pbuffer[WIDTH + 1];
 	for (int i = 0; i < 8; i++)
@@ -91,19 +120,19 @@ void SSD1306_refresh(struct SSD1306 *ssd1306)
 		SSD1306_send_data(ssd1306, 0x00, 0x00);
 		SSD1306_send_data(ssd1306, 0x00, 0x10);
 
-		uint8_t *buffer = ssd1306->screen_data + i * WIDTH;
+		uint8_t *buffer = ssd1306->screen_data + i * WIDTH + WIDTH - 1;
 		pbuffer[0] = 0x40;
 		for (int j = 0; j < WIDTH; j++)
 		{
 			pbuffer[j + 1] = *buffer;
-			buffer++;
+			buffer--;
 		}
 
 		i2c_transfer7(ssd1306->i2c, ssd1306->addr, pbuffer, WIDTH + 1, NULL, 0);
 	}
 }
 
-void SSD1306_init_B(struct SSD1306 *ssd1306)
+static void SSD1306_init(struct SSD1306 *ssd1306)
 {
 	const uint8_t instructions[] = {
 		SSD1306_CMD_START,			 // start commands
@@ -128,11 +157,11 @@ void SSD1306_init_B(struct SSD1306 *ssd1306)
 		SSD1306_SETPRECHARGE,		 // set precharge period
 		0xF1,						 //   phase1 = 15, phase2 = 1
 		SSD1306_SETVCOMLEVEL,		 // set VCOMH deselect level
-		0x40,						 //   ????? (0,2,3)
-		SSD1306_ENTIREDISPLAY_OFF,	 // use RAM contents for display
-		SSD1306_SETINVERT_OFF,		 // no inversion
-		SSD1306_SCROLL_DEACTIVATE,	 // no scrolling
-		SSD1306_SETDISPLAY_ON,		 // turn on display (normal mode)
+		0x40,
+		SSD1306_ENTIREDISPLAY_OFF,
+		SSD1306_SETINVERT_OFF,
+		SSD1306_SCROLL_DEACTIVATE,
+		SSD1306_SETDISPLAY_ON,
 	};
 	// send list of commands
 	i2c_transfer7(ssd1306->i2c, ssd1306->addr, instructions, sizeof(instructions), NULL, 0);
@@ -174,34 +203,9 @@ static void i2c_setup(void)
 	i2c_peripheral_enable(I2C1);
 }
 
-const uint8_t u8x8_font_5x7_r[764] =
-	" ~\1\1\0\0\0\0\0\0\0\0\0\0^\0\0\0\0\0\0\16\0\16\0\0\0\0(|(|"
-	"(\0\0\0\10T|T \0\0\0&\20\10d\0\0\0\0(T(@\0\0\0\0\0\0\16\0"
-	"\0\0\0\0\0<B\0\0\0\0\0\0B<\0\0\0\0\0\0T\70T\0\0\0\0\20\20|\20"
-	"\20\0\0\0\0\200` \0\0\0\0\20\20\20\20\0\0\0\0\0``\0\0\0\0\0 \20\10\4"
-	"\0\0\0\0\0<B<\0\0\0\0\0D~@\0\0\0\0DbRL\0\0\0\0\42JJ\66"
-	"\0\0\0\0\30\24~\20\0\0\0\0.JJ\62\0\0\0\0<JJ\60\0\0\0\0\2b\32\6"
-	"\0\0\0\0\64JJ\64\0\0\0\0\14RR<\0\0\0\0\0ll\0\0\0\0\0\200l,\0"
-	"\0\0\0\0\0\20(D\0\0\0\0((((\0\0\0\0\0D(\20\0\0\0\0\0\4R\14"
-	"\0\0\0\0<BZ\34\0\0\0\0|\22\22|\0\0\0\0~JJ\64\0\0\0\0<BB$"
-	"\0\0\0\0~BB<\0\0\0\0~JJB\0\0\0\0~\12\12\2\0\0\0\0<BRt"
-	"\0\0\0\0~\10\10~\0\0\0\0\0B~B\0\0\0\0 @@>\0\0\0\0~\30$B"
-	"\0\0\0\0~@@@\0\0\0\0~\14\14~\0\0\0\0~\14\60~\0\0\0\0<BB<"
-	"\0\0\0\0~\22\22\14\0\0\0\0<bB\274\0\0\0\0~\22\62L\0\0\0\0$JR$"
-	"\0\0\0\0\0\2~\2\0\0\0\0>@@>\0\0\0\0\36``\36\0\0\0\0~\60\60~"
-	"\0\0\0\0f\30\30f\0\0\0\0\0\16p\16\0\0\0\0bRJF\0\0\0\0\0~BB"
-	"\0\0\0\0\4\10\20 \0\0\0\0\0BB~\0\0\0\0\0\4\2\4\0\0\0\0@@@@"
-	"\0\0\0\0\0\2\4\0\0\0\0\0\60H(x\0\0\0\0~HH\60\0\0\0\0\60HH\0"
-	"\0\0\0\0\60HH~\0\0\0\0\60hX\20\0\0\0\0\20|\22\4\0\0\0\0P\250\250\230"
-	"\0\0\0\0~\10\10p\0\0\0\0\0Hz@\0\0\0\0\0@\200z\0\0\0\0~\20(@"
-	"\0\0\0\0\0B~@\0\0\0\0x\20\30p\0\0\0\0x\10\10p\0\0\0\0\60HH\60"
-	"\0\0\0\0\370HH\60\0\0\0\0\60HH\370\0\0\0\0x\10\10\20\0\0\0\0PXh("
-	"\0\0\0\0\10>H@\0\0\0\0\70@@x\0\0\0\0\0\70@\70\0\0\0\0x``x"
-	"\0\0\0\0H\60\60H\0\0\0\0\30\240@\70\0\0\0\0HhXH\0\0\0\0\0\10<B"
-	"\0\0\0\0\0\0~\0\0\0\0\0\0B<\10\0\0\0\0\4\2\4\2\0\0\0";
-
 int main(void)
 {
+	int i;
 	struct SSD1306 ssd1306;
 
 	ssd1306.i2c = I2C1;
@@ -209,10 +213,8 @@ int main(void)
 	ssd1306.width = WIDTH;
 	ssd1306.height = HEIGHT;
 
-	ssd1306.screen_data_length = ssd1306.width * ssd1306.height / 8;
+	ssd1306.screen_data_length = ssd1306.width * ssd1306.height >> 3;
 	ssd1306.screen_data = (uint8_t *)malloc(ssd1306.screen_data_length);
-	// fill with zeros
-	memset(ssd1306.screen_data, 0, ssd1306.screen_data_length);
 
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 
@@ -222,24 +224,15 @@ int main(void)
 
 	i2c_setup();
 
-	// SSD1306_init(&ssd1306);
-	SSD1306_init_B(&ssd1306);
+	SSD1306_init(&ssd1306);
 
-	// SSD1306_fill(&ssd1306, false);
 	memset(ssd1306.screen_data, 0x00, ssd1306.screen_data_length);
-
-	int i;
-	for (i = 0; i < WIDTH; i++)
-	{
-		SSD1306_draw_pixel(&ssd1306, i, 16);
-	}
-	for (i = 0; i < HEIGHT; i++)
-	{
-		SSD1306_draw_pixel(&ssd1306, 5, i);
-	}
+	SSD1306_draw_string(&ssd1306, 2, 0, "Midi note: 0x00");
+	SSD1306_draw_string(&ssd1306, 2, 8, "Oscillator 1 [f]");
+	SSD1306_draw_string(&ssd1306, 2, 16, ".. bandpass");
+	SSD1306_draw_string(&ssd1306, 2, 24, ".. bandlimit");
 
 	SSD1306_refresh(&ssd1306);
-	// SSD1306_display(&ssd1306);
 
 	while (true)
 	{
