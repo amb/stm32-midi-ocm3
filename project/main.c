@@ -1,6 +1,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/i2c.h>
+#include <libopencm3/stm32/adc.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -79,8 +80,8 @@ static void SSD1306_send_data(struct SSD1306 *ssd1306, int spec, uint8_t data)
 
 static void SSD1306_draw_pixel(struct SSD1306 *ssd1306, uint8_t x, uint8_t y)
 {
-	x &= 0b01111111;
-	y &= 0b00011111;
+	x &= 0b01111111; // 128
+	y &= 0b00011111; // 32
 	// y = HEIGHT - 1 - (y & 0b00011111);
 	ssd1306->screen_data[x + (y >> 3) * ssd1306->width] |= 1 << (y & 0x07);
 }
@@ -134,6 +135,16 @@ static void SSD1306_refresh(struct SSD1306 *ssd1306)
 
 static void SSD1306_init(struct SSD1306 *ssd1306)
 {
+
+	ssd1306->i2c = I2C1;
+	ssd1306->addr = 0x3C;
+	ssd1306->width = WIDTH;
+	ssd1306->height = HEIGHT;
+
+	ssd1306->screen_data_length = ssd1306->width * ssd1306->height >> 3;
+	ssd1306->screen_data = (uint8_t *)malloc(ssd1306->screen_data_length);
+
+
 	const uint8_t instructions[] = {
 		SSD1306_CMD_START,			 // start commands
 		SSD1306_SETDISPLAY_OFF,		 // turn off display
@@ -203,18 +214,55 @@ static void i2c_setup(void)
 	i2c_peripheral_enable(I2C1);
 }
 
+static void adc_setup(void)
+{
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOC);
+	rcc_periph_clock_enable(RCC_ADC1);
+
+	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, GPIO1);
+	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, GPIO2);
+
+	/* Make sure the ADC doesn't run during config. */
+	adc_power_off(ADC1);
+
+	/* We configure everything for one single conversion. */
+	adc_disable_scan_mode(ADC1);
+	adc_set_single_conversion_mode(ADC1);
+	adc_disable_external_trigger_regular(ADC1);
+	adc_set_right_aligned(ADC1);
+	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+
+	adc_power_on(ADC1);
+
+	/* Wait for ADC starting up. */
+	int i;
+	for (i = 0; i < 800000; i++) /* Wait a bit. */
+		__asm__("nop");
+
+	adc_reset_calibration(ADC1);
+	adc_calibrate(ADC1);
+}
+
+
+static uint16_t read_adc_naiive(uint8_t channel)
+{
+	uint8_t channel_array[16];
+	channel_array[0] = channel;
+	adc_set_regular_sequence(ADC1, 1, channel_array);
+	adc_start_conversion_direct(ADC1);
+	while (!adc_eoc(ADC1));
+	uint16_t reg16 = adc_read_regular(ADC1);
+	return reg16;
+}
+
+
+
 int main(void)
 {
 	int i;
+	char buf[17];
 	struct SSD1306 ssd1306;
-
-	ssd1306.i2c = I2C1;
-	ssd1306.addr = 0x3C;
-	ssd1306.width = WIDTH;
-	ssd1306.height = HEIGHT;
-
-	ssd1306.screen_data_length = ssd1306.width * ssd1306.height >> 3;
-	ssd1306.screen_data = (uint8_t *)malloc(ssd1306.screen_data_length);
 
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 
@@ -223,21 +271,39 @@ int main(void)
 	gpio_toggle(GPIOC, GPIO13);
 
 	i2c_setup();
+	adc_setup();
 
 	SSD1306_init(&ssd1306);
 
 	memset(ssd1306.screen_data, 0x00, ssd1306.screen_data_length);
-	SSD1306_draw_string(&ssd1306, 2, 0, "Midi note: 0x00");
-	SSD1306_draw_string(&ssd1306, 2, 8, "Oscillator 1 [f]");
-	SSD1306_draw_string(&ssd1306, 2, 16, ".. bandpass");
-	SSD1306_draw_string(&ssd1306, 2, 24, ".. bandlimit");
+	SSD1306_draw_string(&ssd1306, 0, 0, "Midi note: 0x00");
+	SSD1306_draw_string(&ssd1306, 0, 8, "Oscillator 1 [f]");
+	SSD1306_draw_string(&ssd1306, 0, 16, ".. bandpass");
+	SSD1306_draw_string(&ssd1306, 0, 24, ".. bandlimit");
 
 	SSD1306_refresh(&ssd1306);
 
 	while (true)
 	{
+		uint16_t adc1 = read_adc_naiive(1);
+		uint16_t adc2 = read_adc_naiive(2);
 		// gpio_toggle(GPIOC, GPIO13);
-		delay(8000000);
+
+		memset(ssd1306.screen_data, 0x00, ssd1306.screen_data_length);
+
+		SSD1306_draw_string(&ssd1306, 0, 0, "ADC1:");
+		itoa(adc1, buf, 10);
+		buf[16] = 0;
+		SSD1306_draw_string(&ssd1306, 8*6, 0, buf);
+
+		SSD1306_draw_string(&ssd1306, 0, 8, "ADC2:");
+		itoa(adc2, buf, 10);
+		buf[16] = 0;
+		SSD1306_draw_string(&ssd1306, 8*6, 8, buf);
+
+		SSD1306_refresh(&ssd1306);
+
+		delay(400000);
 	}
 
 	free(ssd1306.screen_data);
