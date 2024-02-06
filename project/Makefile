@@ -1,8 +1,7 @@
 PROJECT = midi-ocm
 BUILD_DIR = bin
 
-CFILES = main.c
-# LDSCRIPT = stm32f1.ld
+CFILES = $(wildcard *.c)
 
 OOCD_INTERFACE = stlink
 # DEVICE=stm32f411re

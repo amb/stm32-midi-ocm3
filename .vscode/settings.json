@@ -11,7 +11,9 @@
         "usbd.h": "c",
         "u8x8.h": "c",
         "i2c.h": "c",
-        "i2c_common_v1.h": "c"
+        "i2c_common_v1.h": "c",
+        "gpio.h": "c",
+        "gpio_common_all.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     // "cortex-debug.openocdPath": "/usr/bin/openocd",
