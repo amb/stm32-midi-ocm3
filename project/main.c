@@ -77,14 +77,6 @@ static uint16_t read_adc_naiive(uint8_t channel) {
     return reg16;
 }
 
-static void print_number(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, int16_t num) {
-    // max length => -32768
-    char buf[7];
-    itoa(num, buf);
-    buf[6] = 0;
-    SSD1306_draw_string(ssd1306, x, y, buf);
-}
-
 int main(void) {
     int i;
     struct SSD1306 ssd1306;
@@ -107,13 +99,14 @@ int main(void) {
         uint16_t adc1 = read_adc_naiive(1);
         uint16_t adc2 = read_adc_naiive(2);
 
+        // SSD1306_clear(&ssd1306, adc1 & 0xFF);
         SSD1306_clear(&ssd1306, 0x00);
 
         SSD1306_draw_string(&ssd1306, 0, 0, "ADC1:");
-        print_number(&ssd1306, 8 * 5, 0, adc1);
+        SSD1306_print_number(&ssd1306, 8 * 5, 0, adc1);
 
         SSD1306_draw_string(&ssd1306, 0, 8, "ADC2:");
-        print_number(&ssd1306, 8 * 5, 8, adc2);
+        SSD1306_print_number(&ssd1306, 8 * 5, 8, adc2);
 
         int px = 90 + (adc1 / 220);
         int py = (adc2 / 220);
@@ -127,7 +120,7 @@ int main(void) {
         delay(400000);
     }
 
-    free(ssd1306.screen_data);
+    // free(ssd1306.screen_data);
     return 0;
 }
 

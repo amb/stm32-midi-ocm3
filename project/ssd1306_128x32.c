@@ -1,6 +1,7 @@
 #include "ssd1306_128x32.h"
 
 #include "font8x8_basic.h"
+#include "tools.h"
 
 void SSD1306_send_data(struct SSD1306 *ssd1306, int spec, uint8_t data) {
     uint8_t bf[2];
@@ -18,6 +19,10 @@ void SSD1306_draw_pixel(struct SSD1306 *ssd1306, uint8_t x, uint8_t y) {
 
 void SSD1306_draw_char(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, char ch) {
     uint8_t i, j;
+    // int selchar = ((int)ch)-32;
+    // if (selchar < 0 || selchar > 95) {
+    //     return;
+    // }
     for(i = 0; i < 8; i++) {
         uint8_t line = font8x8_basic[(int)ch][i];
         uint8_t y_seg = (y + i) & 0x07;
@@ -32,6 +37,14 @@ void SSD1306_draw_string(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, const ch
         SSD1306_draw_char(ssd1306, x, y, *str++);
         x += 8;
     }
+}
+
+void SSD1306_print_number(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, int16_t num) {
+    // max length => -32768
+    char buf[7];
+    itoa(num, buf);
+    buf[6] = 0;
+    SSD1306_draw_string(ssd1306, x, y, buf);
 }
 
 void SSD1306_clear(struct SSD1306 *ssd1306, uint8_t val) {
@@ -64,7 +77,8 @@ void SSD1306_init(struct SSD1306 *ssd1306, uint32_t i2c_addr) {
 
     ssd1306->screen_data_length = ssd1306->width * ssd1306->height >> 3;
     // TODO: is using malloc here reasonable?
-    ssd1306->screen_data = (uint8_t *)malloc(ssd1306->screen_data_length);
+    //       it eats 600 bytes from the firmware
+    // ssd1306->screen_data = (uint8_t *)malloc(ssd1306->screen_data_length);
 
     const uint8_t instructions[] = {
         SSD1306_CMD_START,

@@ -6,7 +6,7 @@ CFILES = $(wildcard *.c)
 OOCD_INTERFACE = stlink
 # DEVICE=stm32f411re
 # OOCD_TARGET = stm32f4x
-DEVICE=stm32f103c8t6
+DEVICE = stm32f103c8t6
 OOCD_TARGET = stm32f1x
 
 # You shouldn't have to edit anything below here.

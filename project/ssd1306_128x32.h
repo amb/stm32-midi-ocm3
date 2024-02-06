@@ -61,7 +61,8 @@ struct SSD1306 {
     uint8_t width;
     uint8_t height;
     uint16_t screen_data_length;
-    uint8_t *screen_data;
+    // uint8_t *screen_data;
+    uint8_t screen_data[WIDTH*HEIGHT/8];
 };
 
 void SSD1306_send_data(struct SSD1306 *ssd1306, int spec, uint8_t data);
@@ -71,6 +72,8 @@ void SSD1306_draw_pixel(struct SSD1306 *ssd1306, uint8_t x, uint8_t y);
 void SSD1306_draw_char(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, char ch);
 
 void SSD1306_draw_string(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, const char *str);
+
+void SSD1306_print_number(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, int16_t num);
 
 void SSD1306_clear(struct SSD1306 *ssd1306, uint8_t val);
 

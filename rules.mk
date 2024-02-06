@@ -62,18 +62,9 @@ OBJS += $(CXXFILES:%.cxx=$(BUILD_DIR)/%.o)
 OBJS += $(AFILES:%.S=$(BUILD_DIR)/%.o)
 GENERATED_BINS = $(PROJECT).elf $(PROJECT).bin $(PROJECT).map $(PROJECT).list $(PROJECT).lss
 
-# U8G2 graphics library, grab the U8X8 interfaces
-# U8G2_SRCS = $(wildcard ../u8g2/csrc/u8x8*.c)
-# U8G2_SRCS = ../u8g2/csrc/u8x8_8x8.c
-# U8G2_SRCS += ../u8g2/csrc/u8x8_d_ssd1306_64x32.c
-# U8G2_SRCS += ../u8g2/csrc/u8x8_cad.c
-# U8G2_SRCS += ../u8g2/csrc/u8x8_byte.c
-# U8G2_SRCS += ../u8g2/csrc/u8x8_gpio.c
-# U8G2_SRCS += ../u8g2/csrc/u8x8_display.c
-# U8G2_SRCS += ../u8g2/csrc/u8x8_setup.c
-# OBJS += $(U8G2_SRCS:%.c=%.o)
-
 MY_FLAGS = -DSTM32F1
+# Saves a bit of memory sometimes
+# MY_FLAGS += -flto
 
 TGT_CPPFLAGS += -MD $(MY_FLAGS)
 TGT_CPPFLAGS += -Wall -Wundef $(INCLUDES)
@@ -86,7 +77,7 @@ TGT_CFLAGS += -ffunction-sections -fdata-sections
 TGT_CFLAGS += -Wextra -Wshadow -Wno-unused-variable -Wimplicit-function-declaration
 TGT_CFLAGS += -Wredundant-decls -Wstrict-prototypes -Wmissing-prototypes
 
-TGT_CXXFLAGS += $(OPT) $(CXXSTD) -ggdb3
+TGT_CXXFLAGS += $(OPT) $(CXXSTD) -ggdb3 $(MY_FLAGS)
 TGT_CXXFLAGS += $(ARCH_FLAGS)
 TGT_CXXFLAGS += -fno-common
 TGT_CXXFLAGS += -ffunction-sections -fdata-sections
@@ -99,7 +90,7 @@ TGT_LDFLAGS += $(ARCH_FLAGS)
 TGT_LDFLAGS += -specs=nano.specs
 TGT_LDFLAGS += -Wl,--gc-sections
 # OPTIONAL
-#TGT_LDFLAGS += -Wl,-Map=$(PROJECT).map
+TGT_LDFLAGS += -Wl,-Map=$(PROJECT).map
 ifeq ($(V),99)
 TGT_LDFLAGS += -Wl,--print-gc-sections
 endif
