@@ -14,20 +14,17 @@ void SSD1306_draw_pixel(struct SSD1306 *ssd1306, uint8_t x, uint8_t y) {
     x &= 0b01111111;  // 128
     y &= 0b00011111;  // 32
     // y = HEIGHT - 1 - (y & 0b00011111);
-    ssd1306->screen_data[x + (y >> 3) * ssd1306->width] |= 1 << (y & 0x07);
+    ssd1306->screen_data[(x + (y >> 3) * ssd1306->width) & 0xFFF] |= 1 << (y & 0x07);
 }
 
 void SSD1306_draw_char(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, char ch) {
     uint8_t i, j;
-    // int selchar = ((int)ch)-32;
-    // if (selchar < 0 || selchar > 95) {
-    //     return;
-    // }
+    uint8_t selchar = ((int)ch)-32;
     for(i = 0; i < 8; i++) {
-        uint8_t line = font8x8_basic[(int)ch][i];
+        uint8_t line = font8x8_basic[selchar][i];
         uint8_t y_seg = (y + i) & 0x07;
         for(j = 0; j < 8; j++, line >>= 1) {
-            ssd1306->screen_data[(x + j) + ((y + i) >> 3) * ssd1306->width] |= (line & 1) << y_seg;
+            ssd1306->screen_data[((x + j) + ((y + i) >> 3) * ssd1306->width) & 0xFFF] |= (line & 1) << y_seg;
         }
     }
 }

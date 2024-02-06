@@ -2,15 +2,12 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/i2c.h>
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/timer.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "ssd1306_128x32.h"
 #include "tools.h"
-
-static void delay(int n) {
-    for(int i = 0; i < n; i++) __asm__("nop");
-}
 
 static void i2c_setup(void) {
     /* Enable GPIOB and I2C1 clocks */
@@ -66,6 +63,13 @@ static void adc_setup(void) {
     adc_calibrate(ADC1);
 }
 
+static void delay_setup(void) {
+    rcc_periph_clock_enable(RCC_TIM2);
+    timer_set_prescaler(TIM2, rcc_apb1_frequency / 1000000 - 1);
+    timer_set_period(TIM2, 0xffff);
+    timer_one_shot_mode(TIM2);
+}
+
 static uint16_t read_adc_naiive(uint8_t channel) {
     uint8_t channel_array[16];
     channel_array[0] = channel;
@@ -75,6 +79,14 @@ static uint16_t read_adc_naiive(uint8_t channel) {
         ;
     uint16_t reg16 = adc_read_regular(ADC1);
     return reg16;
+}
+
+static void delay_us(uint32_t us) {
+    TIM_ARR(TIM2) = us;
+    TIM_EGR(TIM2) = TIM_EGR_UG;
+    TIM_CR1(TIM2) |= TIM_CR1_CEN;
+    while(TIM_CR1(TIM2) & TIM_CR1_CEN)
+        ;
 }
 
 int main(void) {
@@ -89,6 +101,7 @@ int main(void) {
 
     i2c_setup();
     adc_setup();
+    delay_setup();
 
     SSD1306_init(&ssd1306, I2C1);
 
@@ -117,7 +130,7 @@ int main(void) {
 
         SSD1306_refresh(&ssd1306);
 
-        delay(400000);
+        delay_us(1000000 / 30);
     }
 
     // free(ssd1306.screen_data);

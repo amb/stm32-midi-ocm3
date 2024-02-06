@@ -61,8 +61,8 @@ struct SSD1306 {
     uint8_t width;
     uint8_t height;
     uint16_t screen_data_length;
-    // uint8_t *screen_data;
-    uint8_t screen_data[WIDTH*HEIGHT/8];
+    // TODO: Why does /8 cause crash here?
+    uint8_t screen_data[WIDTH*HEIGHT/4];
 };
 
 void SSD1306_send_data(struct SSD1306 *ssd1306, int spec, uint8_t data);
