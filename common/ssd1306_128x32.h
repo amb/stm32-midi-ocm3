@@ -73,7 +73,7 @@ void SSD1306_draw_char(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, char ch);
 
 void SSD1306_draw_string(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, const char *str);
 
-void SSD1306_print_number(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, int16_t num);
+void SSD1306_print_number(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, int32_t num);
 
 void SSD1306_clear(struct SSD1306 *ssd1306, uint8_t val);
 

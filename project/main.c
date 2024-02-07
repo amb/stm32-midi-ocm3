@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "ssd1306_128x32.h"
+#include "endless_encoder.h"
 #include "tools.h"
 
 static void i2c_setup(void) {
@@ -86,6 +87,7 @@ static void delay_us(uint32_t us) {
     while(TIM_CR1(TIM2) & TIM_CR1_CEN) {}
 }
 
+
 int main(void) {
     int i;
     struct SSD1306 ssd1306;
@@ -105,16 +107,10 @@ int main(void) {
     SSD1306_clear(&ssd1306, 0x00);
     SSD1306_refresh(&ssd1306);
 
-    uint16_t padc1 = 0;
-    uint16_t padc2 = 0;
+    EndlessEncoder pot = {0};
 
     uint16_t adc1 = 0;
     uint16_t adc2 = 0;
-
-    uint8_t psector = 0;
-    uint8_t sectors = 0;
-
-    int16_t base_count = 0;
 
     uint16_t screen_saver = 0;
 
@@ -122,43 +118,27 @@ int main(void) {
         adc1 = read_adc_naiive(1);
         adc2 = read_adc_naiive(2);
 
-        // lag filtering
-        // TODO: 10 range might not be enough, try 16
-        if(abs(padc1 - adc1) > 10) {
-            padc1 = adc1 - (adc1 > padc1) * 10;
+        if(encoder_update_smooth(&pot, adc1, adc2)) {
             screen_saver = 0;
         }
 
-        if(abs(padc2 - adc2) > 10) {
-            padc2 = adc2 - (adc2 > padc2) * 10;
-            screen_saver = 0;
-        }
-
-        // calc sectors (0 to 3 in clockwise order)
-        psector = sectors;
-        sectors = (padc1 > 2048) | ((padc2 > 2048) << 1);
-        sectors ^= ((sectors & 0b10) >> 1);
-
-        // keep track of 360 rotations
-        if(psector == 0 && sectors == 3) { base_count--; }
-
-        if(psector == 3 && sectors == 0) { base_count++; }
+        int32_t total_value = encoder_get_total(&pot);
 
         // SSD1306_clear(&ssd1306, adc1 & 0xFF);
         SSD1306_clear(&ssd1306, 0x00);
 
         if(screen_saver < 30 * 20) {
             SSD1306_draw_string(&ssd1306, 0, 0, "ADC1:");
-            SSD1306_print_number(&ssd1306, 8 * 5, 0, padc1);
+            SSD1306_print_number(&ssd1306, 8 * 5, 0, pot.smooth1);
 
             SSD1306_draw_string(&ssd1306, 0, 8, "ADC2:");
-            SSD1306_print_number(&ssd1306, 8 * 5, 8, padc2);
+            SSD1306_print_number(&ssd1306, 8 * 5, 8, pot.smooth2);
 
-            SSD1306_draw_string(&ssd1306, 0, 16, "bits:");
-            SSD1306_print_number(&ssd1306, 8 * 5, 16, sectors);
+            SSD1306_draw_string(&ssd1306, 0, 16, "totl:");
+            SSD1306_print_number(&ssd1306, 8 * 5, 16, total_value);
 
-            SSD1306_draw_string(&ssd1306, 0, 24, "base:");
-            SSD1306_print_number(&ssd1306, 8 * 5, 24, base_count);
+            SSD1306_draw_string(&ssd1306, 0, 24, "rato:");
+            SSD1306_print_number(&ssd1306, 8 * 5, 24, pot.base_count);
 
             int px = 90 + (adc1 / 220);
             int py = (adc2 / 220);

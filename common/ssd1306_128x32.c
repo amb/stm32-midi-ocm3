@@ -36,11 +36,11 @@ void SSD1306_draw_string(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, const ch
     }
 }
 
-void SSD1306_print_number(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, int16_t num) {
+void SSD1306_print_number(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, int32_t num) {
     // max length => -32768
-    char buf[7];
+    char buf[17];
     itoa7(num, buf);
-    buf[6] = 0;
+    buf[16] = 0;
     SSD1306_draw_string(ssd1306, x, y, buf);
 }
 

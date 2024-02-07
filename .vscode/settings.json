@@ -34,7 +34,8 @@
         "adc.h": "c",
         "cstdint": "cpp",
         "ssd1306_128x32.h": "c",
-        "midi.h": "c"
+        "midi.h": "c",
+        "compare": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     // "cortex-debug.openocdPath": "/usr/bin/openocd",
