@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ssd1306_128x32.h"
 #include "endless_encoder.h"
+#include "ssd1306_128x32.h"
 #include "tools.h"
 
 static void i2c_setup(void) {
@@ -87,7 +87,6 @@ static void delay_us(uint32_t us) {
     while(TIM_CR1(TIM2) & TIM_CR1_CEN) {}
 }
 
-
 int main(void) {
     int i;
     struct SSD1306 ssd1306;
@@ -118,13 +117,8 @@ int main(void) {
         adc1 = read_adc_naiive(1);
         adc2 = read_adc_naiive(2);
 
-        if(encoder_update_smooth(&pot, adc1, adc2)) {
-            screen_saver = 0;
-        }
+        if(encoder_update(&pot, adc1, adc2)) { screen_saver = 0; }
 
-        int32_t total_value = encoder_get_total(&pot);
-
-        // SSD1306_clear(&ssd1306, adc1 & 0xFF);
         SSD1306_clear(&ssd1306, 0x00);
 
         if(screen_saver < 30 * 20) {
@@ -135,7 +129,7 @@ int main(void) {
             SSD1306_print_number(&ssd1306, 8 * 5, 8, pot.smooth2);
 
             SSD1306_draw_string(&ssd1306, 0, 16, "totl:");
-            SSD1306_print_number(&ssd1306, 8 * 5, 16, total_value);
+            SSD1306_print_number(&ssd1306, 8 * 5, 16, pot.total_value);
 
             SSD1306_draw_string(&ssd1306, 0, 24, "rato:");
             SSD1306_print_number(&ssd1306, 8 * 5, 24, pot.base_count);
@@ -159,36 +153,3 @@ int main(void) {
     // free(ssd1306.screen_data);
     return 0;
 }
-
-// ST AN5086
-// I2S: Master transmitter I2S emulator with SPI and STM32 MCU
-// SPI_MOSI -> I2S_SD
-// SPI_SCK -> I2S_SCK
-// TIMER_OUT -> I2S_WS
-// TIMER_TRG <- SCK
-// SYSCLK <- External clock
-
-// blue pill SPI ports
-
-// SPI1
-// SPI1_MOSI -> PA7 (PB5 alt)
-// SPI1_SCLK -> PA5 (PB3 alt)
-
-// SPI2 (no alternative ports)
-// SPI2_MOSI -> PB15
-// SPI2_SCLK -> PB13
-
-// System clock = HSI/MSI or HSE
-// I2S serial data and clock = SPI (standard)
-// I2S frame rate = TIMER
-
-// Timer peripheral
-// The polarity of the timer, the counter period and its initial values are set to match the I²S
-// protocol configuration:
-// • period value = 31
-// • pulse value = 15
-// • trigger polarity = rising
-// • output comparator polarity = TIM_OCPOLARITY_HIGH
-
-// Calculation of the I²S interface bit rate
-// I2S BITRATE SAMPLE RATE WIDTH× CHANNEL× 48000 16 2×× 1.536 Mbit/s
