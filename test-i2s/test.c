@@ -1,4 +1,3 @@
-
 // ST AN5086
 // I2S: Master transmitter I2S emulator with SPI and STM32 MCU
 // SPI_MOSI -> I2S_SD
@@ -46,6 +45,20 @@ uint16_t phase[4] = {0};
 uint16_t sample = 0;
 
 void update_sample(void);
+
+static void delay_setup(void) {
+    rcc_periph_clock_enable(RCC_TIM2);
+    timer_set_prescaler(TIM2, rcc_apb1_frequency / 1000000 - 1);
+    timer_set_period(TIM2, 0xffff);
+    timer_one_shot_mode(TIM2);
+}
+
+static void delay_us(uint32_t us) {
+    TIM_ARR(TIM2) = us;
+    TIM_EGR(TIM2) = TIM_EGR_UG;
+    TIM_CR1(TIM2) |= TIM_CR1_CEN;
+    while(TIM_CR1(TIM2) & TIM_CR1_CEN) {}
+}
 
 static void setup(void) {
     rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
@@ -100,6 +113,8 @@ static void setup(void) {
 
     // Enable the NVIC interrupt for TIM3
     nvic_enable_irq(NVIC_TIM3_IRQ);
+
+    delay_setup();
 }
 
 void tim3_isr() {
@@ -108,22 +123,6 @@ void tim3_isr() {
         update_sample();
     }
 }
-
-
-static void delay_setup(void) {
-    rcc_periph_clock_enable(RCC_TIM2);
-    timer_set_prescaler(TIM2, rcc_apb1_frequency / 1000000 - 1);
-    timer_set_period(TIM2, 0xffff);
-    timer_one_shot_mode(TIM2);
-}
-
-static void delay_us(uint32_t us) {
-    TIM_ARR(TIM2) = us;
-    TIM_EGR(TIM2) = TIM_EGR_UG;
-    TIM_CR1(TIM2) |= TIM_CR1_CEN;
-    while(TIM_CR1(TIM2) & TIM_CR1_CEN) {}
-}
-
 
 void update_sample() {
     phase[0] += 220;
@@ -148,19 +147,17 @@ void update_sample() {
     // Your sample update logic here
     gpio_clear(GPIOA, WS_PIN);
     spi_write(SPI1, sample);
-    // spi_write(SPI1, ((int32_t)sample)-32768);
 
-    delay_us(3);
+    // 2 or 3 microseconds
+    // 1 is too few
+    delay_us(2);
 
-    // TODO: this never plays anything
     gpio_set(GPIOA, WS_PIN);
     spi_write(SPI1, sample);
-    // spi_write(SPI1, ((int32_t)sample)-32768);
 }
 
 int main(void) {
     setup();
-    delay_setup();
 
     while(1) {
         // Main loop
