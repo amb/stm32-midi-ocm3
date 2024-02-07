@@ -109,38 +109,58 @@ void tim3_isr() {
     }
 }
 
+
+static void delay_setup(void) {
+    rcc_periph_clock_enable(RCC_TIM2);
+    timer_set_prescaler(TIM2, rcc_apb1_frequency / 1000000 - 1);
+    timer_set_period(TIM2, 0xffff);
+    timer_one_shot_mode(TIM2);
+}
+
+static void delay_us(uint32_t us) {
+    TIM_ARR(TIM2) = us;
+    TIM_EGR(TIM2) = TIM_EGR_UG;
+    TIM_CR1(TIM2) |= TIM_CR1_CEN;
+    while(TIM_CR1(TIM2) & TIM_CR1_CEN) {}
+}
+
+
 void update_sample() {
-    phase[0] += 440;
-    phase[1] += 555;
-    phase[1] += 660;
+    phase[0] += 220;
+    phase[1] += 549;
+    phase[2] += 661;
 
     // Square
-    sample =  ((phase[0] < 32768) * 65000 + 32) / 8;
-    sample += ((phase[1] < 32768) * 65000 + 32) / 8;
-    sample += ((phase[2] < 32768) * 65000 + 32) / 8;
+    // sample =  ((phase[0] < 32768) * 65635) / 4;
+    // sample += ((phase[1] < 32768) * 65635) / 4;
+    // sample += ((phase[2] < 32768) * 65635) / 4;
 
     // Triangle
-    // if(phase < 32768) {
-    //     sample = phase + 1024;
+    // if(phase[0] < 32768) {
+    //     sample = phase[0];
     // } else {
-    //     sample = 32768 - (phase-32768) + 1024;
+    //     sample = 32768 - (phase[0]-32768);
     // }
 
     // Saw
-    // sample = phase;
+    sample = phase[0];
 
     // Your sample update logic here
     gpio_clear(GPIOA, WS_PIN);
     spi_write(SPI1, sample);
     // spi_write(SPI1, ((int32_t)sample)-32768);
 
+    delay_us(3);
+
     // TODO: this never plays anything
     gpio_set(GPIOA, WS_PIN);
     spi_write(SPI1, sample);
+    // spi_write(SPI1, ((int32_t)sample)-32768);
 }
 
 int main(void) {
     setup();
+    delay_setup();
 
     while(1) {
         // Main loop

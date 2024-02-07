@@ -71,6 +71,13 @@ static void delay_setup(void) {
     timer_one_shot_mode(TIM2);
 }
 
+static void delay_us(uint32_t us) {
+    TIM_ARR(TIM2) = us;
+    TIM_EGR(TIM2) = TIM_EGR_UG;
+    TIM_CR1(TIM2) |= TIM_CR1_CEN;
+    while(TIM_CR1(TIM2) & TIM_CR1_CEN) {}
+}
+
 static uint16_t read_adc_naiive(uint8_t channel) {
     uint8_t channel_array[16];
     channel_array[0] = channel;
@@ -78,13 +85,6 @@ static uint16_t read_adc_naiive(uint8_t channel) {
     adc_start_conversion_direct(ADC1);
     while(!adc_eoc(ADC1)) {}
     return adc_read_regular(ADC1);
-}
-
-static void delay_us(uint32_t us) {
-    TIM_ARR(TIM2) = us;
-    TIM_EGR(TIM2) = TIM_EGR_UG;
-    TIM_CR1(TIM2) |= TIM_CR1_CEN;
-    while(TIM_CR1(TIM2) & TIM_CR1_CEN) {}
 }
 
 int main(void) {
