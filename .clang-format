@@ -8,3 +8,5 @@ PenaltyBreakAssignment: 2
 PenaltyReturnTypeOnItsOwnLine: 200
 PointerAlignment: Left
 SpaceBeforeParens: Never
+AllowShortLoopsOnASingleLine: true
+AllowShortBlocksOnASingleLine: true

@@ -75,18 +75,15 @@ static uint16_t read_adc_naiive(uint8_t channel) {
     channel_array[0] = channel;
     adc_set_regular_sequence(ADC1, 1, channel_array);
     adc_start_conversion_direct(ADC1);
-    while(!adc_eoc(ADC1))
-        ;
-    uint16_t reg16 = adc_read_regular(ADC1);
-    return reg16;
+    while(!adc_eoc(ADC1)) {}
+    return adc_read_regular(ADC1);
 }
 
 static void delay_us(uint32_t us) {
     TIM_ARR(TIM2) = us;
     TIM_EGR(TIM2) = TIM_EGR_UG;
     TIM_CR1(TIM2) |= TIM_CR1_CEN;
-    while(TIM_CR1(TIM2) & TIM_CR1_CEN)
-        ;
+    while(TIM_CR1(TIM2) & TIM_CR1_CEN) {}
 }
 
 int main(void) {
@@ -130,6 +127,7 @@ int main(void) {
 
         SSD1306_refresh(&ssd1306);
 
+        // 30fps
         delay_us(1000000 / 30);
     }
 

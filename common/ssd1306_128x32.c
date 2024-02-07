@@ -19,7 +19,7 @@ void SSD1306_draw_pixel(struct SSD1306 *ssd1306, uint8_t x, uint8_t y) {
 
 void SSD1306_draw_char(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, char ch) {
     uint8_t i, j;
-    uint8_t selchar = ((int)ch)-32;
+    uint8_t selchar = ((int)ch) - 32;
     for(i = 0; i < 8; i++) {
         uint8_t line = font8x8_basic[selchar][i];
         uint8_t y_seg = (y + i) & 0x07;
@@ -39,7 +39,7 @@ void SSD1306_draw_string(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, const ch
 void SSD1306_print_number(struct SSD1306 *ssd1306, uint8_t x, uint8_t y, int16_t num) {
     // max length => -32768
     char buf[7];
-    itoa(num, buf);
+    itoa7(num, buf);
     buf[6] = 0;
     SSD1306_draw_string(ssd1306, x, y, buf);
 }
