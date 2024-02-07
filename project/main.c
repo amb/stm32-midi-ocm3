@@ -116,17 +116,22 @@ int main(void) {
 
     int16_t base_count = 0;
 
+    uint16_t screen_saver = 0;
+
     while(true) {
         adc1 = read_adc_naiive(1);
         adc2 = read_adc_naiive(2);
 
         // lag filtering
-        if (abs(padc1 - adc1) > 10) {
+        // TODO: 10 range might not be enough, try 16
+        if(abs(padc1 - adc1) > 10) {
             padc1 = adc1 - (adc1 > padc1) * 10;
+            screen_saver = 0;
         }
 
-        if (abs(padc2 - adc2) > 10) {
+        if(abs(padc2 - adc2) > 10) {
             padc2 = adc2 - (adc2 > padc2) * 10;
+            screen_saver = 0;
         }
 
         // calc sectors (0 to 3 in clockwise order)
@@ -135,36 +140,35 @@ int main(void) {
         sectors ^= ((sectors & 0b10) >> 1);
 
         // keep track of 360 rotations
-        if (psector == 0 && sectors == 3) {
-            base_count--;
-        }
+        if(psector == 0 && sectors == 3) { base_count--; }
 
-        if (psector == 3 && sectors == 0) {
-            base_count++;
-        }
+        if(psector == 3 && sectors == 0) { base_count++; }
 
         // SSD1306_clear(&ssd1306, adc1 & 0xFF);
         SSD1306_clear(&ssd1306, 0x00);
 
-        SSD1306_draw_string(&ssd1306, 0, 0, "ADC1:");
-        SSD1306_print_number(&ssd1306, 8 * 5, 0, padc1);
+        if(screen_saver < 30 * 20) {
+            SSD1306_draw_string(&ssd1306, 0, 0, "ADC1:");
+            SSD1306_print_number(&ssd1306, 8 * 5, 0, padc1);
 
-        SSD1306_draw_string(&ssd1306, 0, 8, "ADC2:");
-        SSD1306_print_number(&ssd1306, 8 * 5, 8, padc2);
+            SSD1306_draw_string(&ssd1306, 0, 8, "ADC2:");
+            SSD1306_print_number(&ssd1306, 8 * 5, 8, padc2);
 
-        SSD1306_draw_string(&ssd1306, 0, 16, "bits:");
-        SSD1306_print_number(&ssd1306, 8 * 5, 16, sectors);
+            SSD1306_draw_string(&ssd1306, 0, 16, "bits:");
+            SSD1306_print_number(&ssd1306, 8 * 5, 16, sectors);
 
-        SSD1306_draw_string(&ssd1306, 0, 24, "base:");
-        SSD1306_print_number(&ssd1306, 8 * 5, 24, base_count);
+            SSD1306_draw_string(&ssd1306, 0, 24, "base:");
+            SSD1306_print_number(&ssd1306, 8 * 5, 24, base_count);
 
+            int px = 90 + (adc1 / 220);
+            int py = (adc2 / 220);
+            SSD1306_draw_pixel(&ssd1306, px, py);
+            SSD1306_draw_pixel(&ssd1306, px + 1, py + 1);
+            SSD1306_draw_pixel(&ssd1306, px + 1, py);
+            SSD1306_draw_pixel(&ssd1306, px, py + 1);
 
-        int px = 90 + (adc1 / 220);
-        int py = (adc2 / 220);
-        SSD1306_draw_pixel(&ssd1306, px, py);
-        SSD1306_draw_pixel(&ssd1306, px + 1, py + 1);
-        SSD1306_draw_pixel(&ssd1306, px + 1, py);
-        SSD1306_draw_pixel(&ssd1306, px, py + 1);
+            screen_saver++;
+        }
 
         SSD1306_refresh(&ssd1306);
 

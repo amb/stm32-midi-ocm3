@@ -37,9 +37,7 @@ void itoa7(int16_t num, char *str) {
     }
 
     // Add sign if the number was negative
-    if(sign) {
-        str[i++] = '-';
-    }
+    if(sign) { str[i++] = '-'; }
 
     // Reverse the string
     reverse(str, i);
