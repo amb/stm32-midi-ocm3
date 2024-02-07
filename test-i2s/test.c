@@ -42,7 +42,7 @@
 // #define LFO_POT_1 GPIO1
 // #define LFO_POT_2 GPIO2
 
-uint16_t phase = 0;
+uint16_t phase[4] = {0};
 uint16_t sample = 0;
 
 void update_sample(void);
@@ -110,10 +110,14 @@ void tim3_isr() {
 }
 
 void update_sample() {
-    phase += 440;
+    phase[0] += 440;
+    phase[1] += 555;
+    phase[1] += 660;
 
     // Square
-    // sample = (phase < 32768) * 65000 + 32;
+    sample =  ((phase[0] < 32768) * 65000 + 32) / 8;
+    sample += ((phase[1] < 32768) * 65000 + 32) / 8;
+    sample += ((phase[2] < 32768) * 65000 + 32) / 8;
 
     // Triangle
     // if(phase < 32768) {
@@ -123,7 +127,7 @@ void update_sample() {
     // }
 
     // Saw
-    sample = phase;
+    // sample = phase;
 
     // Your sample update logic here
     gpio_clear(GPIOA, WS_PIN);
