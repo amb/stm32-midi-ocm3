@@ -39,8 +39,8 @@
 #include <libopencm3/cm3/nvic.h>
 
 #define WS_PIN GPIO3
-#define LFO_POT_1 GPIO1
-#define LFO_POT_2 GPIO2
+// #define LFO_POT_1 GPIO1
+// #define LFO_POT_2 GPIO2
 
 void update_sample(void);
 
@@ -49,8 +49,8 @@ static void setup(void) {
     rcc_periph_clock_enable(RCC_SPI1);
     rcc_periph_clock_enable(RCC_TIM3);
 
-    // Configure pins for LFO Potentiometers
-    gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, LFO_POT_1 | LFO_POT_2);
+    // // Configure pins for LFO Potentiometers
+    // gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, LFO_POT_1 | LFO_POT_2);
 
     // Configure Word Select (WS) pin as output
     gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, WS_PIN);
@@ -58,7 +58,8 @@ static void setup(void) {
     // SPI Configuration
     spi_set_master_mode(SPI1);
     spi_set_baudrate_prescaler(SPI1, SPI_CR1_BR_FPCLK_DIV_4);
-    spi_set_data_size(SPI1, SPI_CR2_DS_16BIT);
+    // spi_set_data_size(SPI1, SPI_CR2_DS_16BIT);
+    SPI_CR2(SPI1) |= SPI_I2SCFGR_I2SSTD_MSB_JUSTIFIED;
     spi_set_clock_polarity_0(SPI1);
     spi_set_clock_phase_1(SPI1);
     spi_enable_software_slave_management(SPI1);
@@ -66,7 +67,7 @@ static void setup(void) {
     spi_enable(SPI1);
 
     // Timer3 Configuration
-    timer_reset(TIM3);
+    rcc_periph_reset_pulse(RST_TIM3);
     timer_set_mode(TIM3, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
     timer_set_prescaler(TIM3, 72 - 1);
     timer_set_period(TIM3, 20 - 1);
