@@ -72,12 +72,15 @@ static int32_t fixed_exp2 (int32_t a)
 static void update_sample(void) {
     int16_t sample = 0;
     int16_t note = 0;
-    
-    note = (knob / (8192/24));
+    int32_t freq = 0;
 
-    phase[0] += 440 * fixed_exp2((note<<16)/12);
-    phase[1] += 440 * fixed_exp2(((note+4)<<16)/12);
-    phase[2] += 440 * fixed_exp2(((note+7)<<16)/12);
+    // note = (knob / (8192/24));
+    note = -12;
+    freq = knob << 4;
+
+    phase[0] += 440 * fixed_exp2(((note<<16)+freq)/12);
+    phase[1] += 440 * fixed_exp2((((note+4)<<16)+freq)/12);
+    phase[2] += 440 * fixed_exp2((((note+7)<<16)+freq)/12);
 
     // Square
     // sample =  ((phase[0] < 32768) * 65635) / 4;

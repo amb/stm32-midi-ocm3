@@ -22,8 +22,6 @@
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/timer.h>
 
-#include "udelay.h"
-
 #define WS_PIN GPIO3
 
 void i2s_spi_setup(void);
