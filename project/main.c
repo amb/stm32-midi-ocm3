@@ -18,8 +18,10 @@ static const char *usb_strings[] = {"ambi.tech", "midifiddler", usb_serial_numbe
 uint32_t total_received = 0;
 
 uint32_t phase[4] = {0};
-uint32_t amplitude[4] = {0};
-int16_t note = 0;
+uint16_t amplitude[4] = {0};
+int16_t notes[4] = {0};
+
+uint8_t note_pointer = 0;
 
 int32_t knob = 0;
 
@@ -29,8 +31,13 @@ static void usbmidi_data_rx_cb(usbd_device *ubd, uint8_t ep) {
     char buf[64];
     int len = usbd_ep_read_packet(ubd, 0x01, buf, 64);
 
-    if (buf[1] == 144) {
-        note = buf[2] - 69;
+    // Note on
+    if(buf[1] == 144) {
+        notes[note_pointer] = buf[2] - 69;
+        amplitude[note_pointer] = 65535;
+
+        note_pointer++;
+        if(note_pointer >= 3) { note_pointer = 0; }
     }
 
     total_received++;
@@ -49,10 +56,6 @@ static void usbmidi_set_config(usbd_device *ubd, uint16_t wValue) {
 //         60,   /* Note 60 (middle C) */
 //         64,   /* "Normal" velocity */
 //     };
-
-//     // buf[0] |= pressed;
-//     // buf[1] |= pressed << 4;
-
 //     while(usbd_ep_write_packet(usbd_dev, 0x81, buf, sizeof(buf)) == 0) {};
 // }
 
@@ -100,15 +103,19 @@ static uint16_t read_adc_naiive(uint8_t channel) {
 }
 
 static void update_sample(void) {
-    int16_t sample = 0;
+    int32_t sample = 0;
     int32_t freq = 0;
+
+    for(int i = 0; i < 3; i++) {
+        if(amplitude[i] > 0) { amplitude[i]--; }
+    }
 
     // note = (knob / (8192/24));
     freq = knob << 4;
 
-    phase[0] += 440 * fixed_exp2(((note << 16) + freq) / 12);
-    phase[1] += 440 * fixed_exp2((((note + 4) << 16) + freq) / 12);
-    phase[2] += 440 * fixed_exp2((((note + 7) << 16) + freq) / 12);
+    phase[0] += 440 * fixed_exp2(((notes[0] << 16) + freq) / 12);
+    phase[1] += 440 * fixed_exp2(((notes[1] << 16) + freq) / 12);
+    phase[2] += 440 * fixed_exp2(((notes[2] << 16) + freq) / 12);
 
     // Square
     // sample =  ((phase[0] < 32768) * 65635) / 4;
@@ -123,11 +130,22 @@ static void update_sample(void) {
     // }
 
     // Saw
-    sample = ((phase[0] >> 16) - 32768) * amplitude[0] / (32 * 65536);
-    sample += ((phase[1] >> 16) - 32768) * amplitude[1]  / (32 * 65536);
-    sample += ((phase[2] >> 16) - 32768) * amplitude[2]  / (32 * 65536);
+    sample = 0;
+    for (int i = 0; i < 3; i++) {
+        int32_t temp = (phase[i] / 65536) - 32768;
+        temp /= 8;
+        temp *= amplitude[i];
+        temp /= 65536;
+        sample += temp;
+    }
 
-    i2s_send(sample);
+    if (sample > 32000 || sample < -32000) {
+        // Distortion alert
+        gpio_toggle(GPIOC, GPIO13);
+    }
+
+    i2s_send(sample + 32768);
+    // i2s_send((uint16_t)(sample + 32768));
 }
 
 // I2S SPI uses TIM3 and SPI1
@@ -168,13 +186,7 @@ int main(void) {
 
     uint16_t screen_saver = 0;
 
-    for (i = 0; i < 400000; i++) {
-        usbd_poll(usbd_dev);
-    }
-
-    for (i = 0; i < 3; i++) {
-        amplitude[i] = 65535;
-    }
+    for(i = 0; i < 400000; i++) { usbd_poll(usbd_dev); }
 
     while(true) {
         usbd_poll(usbd_dev);
