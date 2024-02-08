@@ -1,6 +1,5 @@
 
-#ifndef COMMON_MIDI_H
-#define COMMON_MIDI_H
+#pragma once
 
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/stm32/desig.h>
@@ -295,5 +294,3 @@ static const uint8_t sysex_identity[] = {
 };
 
 usbd_device* usb_start(const char *usb_strings[]);
-
-#endif

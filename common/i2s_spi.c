@@ -59,15 +59,10 @@ void i2s_spi_setup(void) {
 }
 
 void i2s_send(uint16_t sample) {
+    // TODO: this is monophonic
     gpio_clear(GPIOA, WS_PIN);
-    // spi_write(SPI1, sample);
     spi_send(SPI1, sample);
 
-    // 2 or 3 microseconds
-    // 1 is too few
-    // delay_us(3);
-
     gpio_set(GPIOA, WS_PIN);
-    // spi_write(SPI1, sample);
     spi_send(SPI1, sample);
 }

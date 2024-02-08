@@ -7,10 +7,59 @@
 #include <string.h>
 
 #include "endless_encoder.h"
+#include "i2s_spi.h"
+#include "midi.h"
 #include "ssd1306_128x32.h"
 #include "tools.h"
 #include "udelay.h"
-#include "i2s_spi.h"
+
+usbd_device *usbd_dev;
+static const char *usb_strings[] = {"ambi.tech", "midifiddler", usb_serial_number};
+uint32_t total_received = 0;
+
+uint32_t phase[4] = {0};
+uint32_t amplitude[4] = {0};
+int16_t note = 0;
+
+int32_t knob = 0;
+
+static void usbmidi_data_rx_cb(usbd_device *ubd, uint8_t ep) {
+    (void)ep;
+
+    char buf[64];
+    int len = usbd_ep_read_packet(ubd, 0x01, buf, 64);
+
+    if (buf[1] == 144) {
+        note = buf[2] - 69;
+    }
+
+    total_received++;
+}
+
+static void usbmidi_set_config(usbd_device *ubd, uint16_t wValue) {
+    (void)wValue;
+    usbd_ep_setup(ubd, 0x01, USB_ENDPOINT_ATTR_BULK, 64, usbmidi_data_rx_cb);
+    usbd_ep_setup(ubd, 0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+}
+
+// static void send_test_output(void) {
+//     char buf[4] = {
+//         0x08, /* USB framing: virtual cable 0, note on */
+//         0x80, /* MIDI command: note on, channel 1 */
+//         60,   /* Note 60 (middle C) */
+//         64,   /* "Normal" velocity */
+//     };
+
+//     // buf[0] |= pressed;
+//     // buf[1] |= pressed << 4;
+
+//     while(usbd_ep_write_packet(usbd_dev, 0x81, buf, sizeof(buf)) == 0) {};
+// }
+
+static void usb_midi_setup(void) {
+    usbd_dev = usb_start(usb_strings);
+    usbd_register_set_config_callback(usbd_dev, usbmidi_set_config);
+}
 
 static void adc_setup(void) {
     rcc_periph_clock_enable(RCC_GPIOA);
@@ -50,37 +99,16 @@ static uint16_t read_adc_naiive(uint8_t channel) {
     return adc_read_regular(ADC1);
 }
 
-uint32_t phase[4] = {0};
-int32_t knob = 0;
-
-/* compute exp2(a) in s15.16 fixed-point arithmetic, -16 < a < 15 */
-static int32_t fixed_exp2 (int32_t a)
-{
-    int32_t i, f, r, s;
-    /* split a = i + f, such that f in [-0.5, 0.5] */
-    i = (a + 0x8000) & ~0xffff; // 0.5
-    f = a - i;   
-    s = ((15 << 16) - i) >> 16;
-    /* minimax approximation for exp2(f) on [-0.5, 0.5] */
-    r = 0x00000e20;                 // 5.5171669058037949e-2
-    r = (r * f + 0x3e1cc333) >> 17; // 2.4261112219321804e-1
-    r = (r * f + 0x58bd46a6) >> 16; // 6.9326098546062365e-1
-    r = r * f + 0x7ffde4a3;         // 9.9992807353939517e-1
-    return (uint32_t)r >> s;
-}
-
 static void update_sample(void) {
     int16_t sample = 0;
-    int16_t note = 0;
     int32_t freq = 0;
 
     // note = (knob / (8192/24));
-    note = -12;
     freq = knob << 4;
 
-    phase[0] += 440 * fixed_exp2(((note<<16)+freq)/12);
-    phase[1] += 440 * fixed_exp2((((note+4)<<16)+freq)/12);
-    phase[2] += 440 * fixed_exp2((((note+7)<<16)+freq)/12);
+    phase[0] += 440 * fixed_exp2(((note << 16) + freq) / 12);
+    phase[1] += 440 * fixed_exp2((((note + 4) << 16) + freq) / 12);
+    phase[2] += 440 * fixed_exp2((((note + 7) << 16) + freq) / 12);
 
     // Square
     // sample =  ((phase[0] < 32768) * 65635) / 4;
@@ -95,9 +123,9 @@ static void update_sample(void) {
     // }
 
     // Saw
-    sample =  ((int16_t)(phase[0] >> 16) - 32768) / 32;
-    sample += ((int16_t)(phase[1] >> 16) - 32768) / 32;
-    sample += ((int16_t)(phase[2] >> 16) - 32768) / 32;
+    sample = ((phase[0] >> 16) - 32768) * amplitude[0] / (32 * 65536);
+    sample += ((phase[1] >> 16) - 32768) * amplitude[1]  / (32 * 65536);
+    sample += ((phase[2] >> 16) - 32768) * amplitude[2]  / (32 * 65536);
 
     i2s_send(sample);
 }
@@ -131,6 +159,8 @@ int main(void) {
     SSD1306_clear(&ssd1306, 0x00);
     SSD1306_refresh(&ssd1306);
 
+    usb_midi_setup();
+
     EndlessEncoder pot = {0};
 
     uint16_t adc1 = 0;
@@ -138,7 +168,17 @@ int main(void) {
 
     uint16_t screen_saver = 0;
 
+    for (i = 0; i < 400000; i++) {
+        usbd_poll(usbd_dev);
+    }
+
+    for (i = 0; i < 3; i++) {
+        amplitude[i] = 65535;
+    }
+
     while(true) {
+        usbd_poll(usbd_dev);
+
         adc1 = read_adc_naiive(1);
         adc2 = read_adc_naiive(2);
 
@@ -156,8 +196,8 @@ int main(void) {
             SSD1306_draw_string(&ssd1306, 0, 16, "totl:");
             SSD1306_print_number(&ssd1306, 8 * 5, 16, pot.total_value);
 
-            SSD1306_draw_string(&ssd1306, 0, 24, "rato:");
-            SSD1306_print_number(&ssd1306, 8 * 5, 24, pot.base_count);
+            SSD1306_draw_string(&ssd1306, 0, 24, "MIDI:");
+            SSD1306_print_number(&ssd1306, 8 * 5, 24, total_received);
 
             int px = 90 + (adc1 / 220);
             int py = (adc2 / 220);
@@ -174,7 +214,10 @@ int main(void) {
         SSD1306_refresh(&ssd1306);
 
         // 30fps
-        delay_us(1000000 / 30);
+        for(i = 0; i < 10; i++) {
+            usbd_poll(usbd_dev);
+            delay_us(1000000 / 300);
+        }
     }
 
     // free(ssd1306.screen_data);
