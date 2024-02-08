@@ -1,6 +1,6 @@
 # Getting started
 ```
-git clone --recurse-submodules https://github.com/libopencm3/libopencm3-template.git
+git clone --recurse-submodules https://github.com/amb/stm32-midi-ocm3.git
 cd stm32-midi-ocm3
 make -C libopencm3
 make -C project
@@ -15,5 +15,3 @@ make -C project
 ```
 make -C project flash
 ```
-
-

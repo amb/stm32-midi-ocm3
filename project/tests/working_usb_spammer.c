@@ -8,8 +8,6 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 
-// #define STM32F1
-
 /*
  * All references in this file come from Universal Serial Bus Device Class
  * Definition for MIDI Devices, release 1.0.
@@ -331,7 +329,6 @@ int main(void)
 {
 	usbd_device *usbd_dev;
 
-	// rcc_clock_setup_pll(&rcc_hsi_configs[RCC_CLOCK_HSI_48MHZ]);
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 
 	rcc_periph_clock_enable(RCC_GPIOA);
