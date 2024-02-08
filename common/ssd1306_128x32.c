@@ -111,3 +111,28 @@ void SSD1306_init(struct SSD1306 *ssd1306, uint32_t i2c_addr) {
     // send list of commands
     i2c_transfer7(ssd1306->i2c, ssd1306->addr, instructions, sizeof(instructions), NULL, 0);
 }
+
+void SSD1306_i2c_setup(void) {
+    /* Enable GPIOB and I2C1 clocks */
+    rcc_periph_clock_enable(RCC_I2C1);
+    rcc_periph_clock_enable(RCC_GPIOB);
+    rcc_periph_clock_enable(RCC_AFIO);
+
+    /* Set alternate functions for SCL and SDA pins of I2C1 */
+    gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, GPIO_I2C1_SCL | GPIO_I2C1_SDA);
+
+    /* Disable the I2C peripheral before configuration */
+    i2c_peripheral_disable(I2C1);
+
+    /* APB1 running at 36MHz */
+    // i2c_set_clock_frequency(I2C1, I2C_CR2_FREQ_36MHZ);
+    i2c_set_clock_frequency(I2C1, 36);
+
+    /* 400kHz - I2C fast mode */
+    i2c_set_fast_mode(I2C1);
+    i2c_set_ccr(I2C1, 0x1e);
+    i2c_set_trise(I2C1, 0x0b);
+
+    /* And go */
+    i2c_peripheral_enable(I2C1);
+}

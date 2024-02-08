@@ -1,4 +1,6 @@
 #include <libopencm3/stm32/i2c.h>
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/gpio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,7 +64,7 @@ struct SSD1306 {
     uint8_t height;
     uint16_t screen_data_length;
     // TODO: Why does /8 cause crash here?
-    uint8_t screen_data[WIDTH*HEIGHT/4];
+    uint8_t screen_data[WIDTH * HEIGHT / 4];
 };
 
 void SSD1306_send_data(struct SSD1306 *ssd1306, int spec, uint8_t data);
@@ -80,3 +82,5 @@ void SSD1306_clear(struct SSD1306 *ssd1306, uint8_t val);
 void SSD1306_refresh(struct SSD1306 *ssd1306);
 
 void SSD1306_init(struct SSD1306 *ssd1306, uint32_t i2c_addr);
+
+void SSD1306_i2c_setup(void);

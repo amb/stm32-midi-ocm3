@@ -6,7 +6,7 @@
     "configurations": [
         {
             "cwd": "${workspaceRoot}",
-            "executable": "./test-i2s/test-i2s.elf",
+            "executable": "./project/midi-ocm.elf",
             "name": "Debug with OpenOCD",
             "request": "launch",
             "type": "cortex-debug",
