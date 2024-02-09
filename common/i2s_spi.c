@@ -1,4 +1,5 @@
 #include "i2s_spi.h"
+#include "udelay.h"
 
 #define WS_PIN GPIO3
 
@@ -56,13 +57,18 @@ void i2s_spi_setup(void) {
 
     // Enable the NVIC interrupt for TIM3
     nvic_enable_irq(NVIC_TIM3_IRQ);
+
+    delay_setup();
 }
 
-void i2s_send(uint16_t sample) {
-    // TODO: this is monophonic
+void i2s_send(uint16_t sample_right, uint16_t sample_left) {
+    // one without the light
     gpio_clear(GPIOA, WS_PIN);
-    spi_send(SPI1, sample);
+    spi_send(SPI1, sample_right);
 
+    delay_us(3);
+
+    // one with the light
     gpio_set(GPIOA, WS_PIN);
-    spi_send(SPI1, sample);
+    spi_send(SPI1, sample_left);
 }

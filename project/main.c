@@ -25,6 +25,15 @@ uint8_t note_pointer = 0;
 
 int32_t knob = 0;
 
+static void note_on(uint8_t note, uint8_t velocity) {
+    (void)velocity;
+    notes[note_pointer] = note - 69;
+    amplitude[note_pointer] = velocity * (65535 / 128);
+
+    note_pointer++;
+    if(note_pointer >= 3) { note_pointer = 0; }
+}
+
 static void usbmidi_data_rx_cb(usbd_device *ubd, uint8_t ep) {
     (void)ep;
 
@@ -32,13 +41,7 @@ static void usbmidi_data_rx_cb(usbd_device *ubd, uint8_t ep) {
     int len = usbd_ep_read_packet(ubd, 0x01, buf, 64);
 
     // Note on
-    if(buf[1] == 144) {
-        notes[note_pointer] = buf[2] - 69;
-        amplitude[note_pointer] = 65535;
-
-        note_pointer++;
-        if(note_pointer >= 3) { note_pointer = 0; }
-    }
+    if(buf[1] == 144) { note_on(buf[2], buf[3]); }
 
     total_received++;
 }
@@ -86,14 +89,15 @@ static void adc_setup(void) {
 
     /* Wait for ADC starting up. */
     int i;
-    for(i = 0; i < 800000; i++) /* Wait a bit. */
-        __asm__("nop");
+    // Was 800000
+    for(i = 0; i < 80000; i++) __asm__("nop");
 
     adc_reset_calibration(ADC1);
     adc_calibrate(ADC1);
 }
 
 static uint16_t read_adc_naiive(uint8_t channel) {
+    // TODO: proper ADC reads
     uint8_t channel_array[16];
     channel_array[0] = channel;
     adc_set_regular_sequence(ADC1, 1, channel_array);
@@ -105,17 +109,15 @@ static uint16_t read_adc_naiive(uint8_t channel) {
 static void update_sample(void) {
     int32_t sample = 0;
     int32_t freq = 0;
+    int i;
 
-    for(int i = 0; i < 3; i++) {
+    for(i = 0; i < 3; i++) {
         if(amplitude[i] > 0) { amplitude[i]--; }
     }
 
-    // note = (knob / (8192/24));
     freq = knob << 4;
 
-    phase[0] += 440 * fixed_exp2(((notes[0] << 16) + freq) / 12);
-    phase[1] += 440 * fixed_exp2(((notes[1] << 16) + freq) / 12);
-    phase[2] += 440 * fixed_exp2(((notes[2] << 16) + freq) / 12);
+    for(i = 0; i < 3; i++) { phase[i] += 440 * fixed_exp2(((notes[i] << 16) + freq) / 12); }
 
     // Square
     // sample =  ((phase[0] < 32768) * 65635) / 4;
@@ -131,21 +133,14 @@ static void update_sample(void) {
 
     // Saw
     sample = 0;
-    for (int i = 0; i < 3; i++) {
-        int32_t temp = (phase[i] / 65536) - 32768;
-        temp /= 8;
-        temp *= amplitude[i];
-        temp /= 65536;
-        sample += temp;
-    }
+    for(i = 0; i < 3; i++) { sample += ((int32_t)(phase[i] / 65536) - 32768) * (amplitude[i] / 8) / 65536; }
 
-    if (sample > 32000 || sample < -32000) {
-        // Distortion alert
-        gpio_toggle(GPIOC, GPIO13);
-    }
+    // Distortion alert
+    if(sample > 32000 || sample < -32000) { gpio_toggle(GPIOC, GPIO13); }
 
-    i2s_send(sample + 32768);
-    // i2s_send((uint16_t)(sample + 32768));
+    // Convert to int16 output value
+    sample += 32768;
+    i2s_send(sample, sample);
 }
 
 // I2S SPI uses TIM3 and SPI1
@@ -185,6 +180,7 @@ int main(void) {
     uint16_t adc2 = 0;
 
     uint16_t screen_saver = 0;
+    uint8_t note_ct = 0;
 
     for(i = 0; i < 400000; i++) { usbd_poll(usbd_dev); }
 
@@ -226,9 +222,16 @@ int main(void) {
         SSD1306_refresh(&ssd1306);
 
         // 30fps
-        for(i = 0; i < 10; i++) {
+        for(i = 0; i < 100; i++) {
             usbd_poll(usbd_dev);
-            delay_us(1000000 / 300);
+            delay_us(1000000 / 3000);
+        }
+
+        // Test notes
+        note_ct++;
+        if(note_ct > 20) {
+            note_ct = 0;
+            note_on(60 + note_pointer * 4, 120);
         }
     }
 

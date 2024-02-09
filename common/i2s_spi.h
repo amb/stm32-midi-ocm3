@@ -26,4 +26,4 @@
 
 void i2s_spi_setup(void);
 
-void i2s_send(uint16_t sample);
+void i2s_send(uint16_t sample_right, uint16_t sample_left);
